@@ -1,0 +1,5 @@
+# App
+WEBUI_MF_BOILERPLATE_API=https://boilerplate-qa.ckotech.co
+
+AccessIssuer__BaseAddress=https://example.com
+AccessApi__BaseAddress=https://example.com

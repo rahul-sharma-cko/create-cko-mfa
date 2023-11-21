@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base",
+  "compileOnSave": true,
+  "compilerOptions": {
+    "module": "commonjs",
+    "baseUrl": "./server",
+    "outDir": "dist",
+    "types": ["node", "jest", "express"],
+    "jsx": "react"
+  },
+  "include": ["server", "webpack.config.js"]
+}
