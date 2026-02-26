@@ -13,16 +13,16 @@ import pkg from '../package.json';
 import { GetTemplateFileArgs, InstallTemplateArgs } from './types';
 
 /**
- * Get the file path for a given file in a template, e.g. "next.config.js".
+ * Get the file path for a given file in a template, e.g. "webpack.config.js".
  */
 export const getTemplateFile = ({ template, mode, file }: GetTemplateFileArgs): string => {
   return path.join(__dirname, template, mode, file);
 };
 
-export const SRC_DIR_NAMES = ['server', 'src'];
+export const SRC_DIR_NAMES = ['src'];
 
 /**
- * Install a Next.js internal template to a given `root` directory.
+ * Install a CKO MFE template to a given `root` directory.
  */
 export const installTemplate = async ({
   appName,
@@ -47,10 +47,10 @@ export const installTemplate = async ({
     parents: true,
     cwd: templatePath,
     rename(name) {
-      console.log('the name is: ', name);
       switch (name) {
         case 'browserslistrc':
         case 'env':
+        case 'envExample':
         case 'eslintignore':
         case 'eslintrc.js':
         case 'npmrc':
@@ -72,7 +72,7 @@ export const installTemplate = async ({
     },
   });
 
-  const tsconfigFile = path.join(root, mode === 'js' ? 'tsconfig.json' : 'tsconfig.json');
+  const tsconfigFile = path.join(root, 'tsconfig.json');
   await fs.writeFile(
     tsconfigFile,
     (await fs.readFile(tsconfigFile, 'utf8'))
@@ -108,58 +108,37 @@ export const installTemplate = async ({
     );
   }
 
-  if (srcDir) {
-    await makeDir(path.join(root, 'src'));
-    await Promise.all(
-      SRC_DIR_NAMES.map(async (file) => {
-        await fs.rename(path.join(root, file), path.join(root, 'src', file)).catch((err) => {
-          if (err.code !== 'ENOENT') {
-            throw err;
-          }
-        });
-      }),
-    );
-
-    const isAppTemplate = template.startsWith('app');
-
-    // Change the `Get started by editing pages/index` / `app/page` to include `src`
-    const indexPageFile = path.join(
-      'src',
-      isAppTemplate ? 'app' : 'pages',
-      `${isAppTemplate ? 'page' : 'index'}.${mode === 'ts' ? 'tsx' : 'js'}`,
-    );
-
-    await fs.writeFile(
-      indexPageFile,
-      (await fs.readFile(indexPageFile, 'utf8')).replace(
-        isAppTemplate ? 'app/page' : 'pages/index',
-        isAppTemplate ? 'src/app/page' : 'src/pages/index',
-      ),
-    );
-  }
+  // Replace the MFE_NAME placeholder in moduleFederationConfig.js with the
+  // snake_case version of the app name.
+  const mfeName = appName.replace(/-/g, '_');
+  const mfeConfigPath = path.join(root, 'moduleFederationConfig.js');
+  await fs.writeFile(
+    mfeConfigPath,
+    (await fs.readFile(mfeConfigPath, 'utf8')).replace(/MFE_NAME/g, mfeName),
+  );
 
   /** Create a package.json for the new project and write it to disk. */
   const packageJson: any = {
     name: appName,
     version: '0.1.0',
     private: true,
+    mfe: {
+      name: `dashboard_${mfeName}-mfe`,
+      path: `dashboard-${appName}`,
+    },
     scripts: {
-      dev: 'yarn build-server && yarn start',
-      'e2e:ci': 'yarn build-server && yarn start',
-      build: 'yarn build-client:release && yarn build-server',
-      'build-client': 'webpack',
-      'build-client:release': 'webpack --env production',
-      'clean:server': 'rimraf dist/server && rimraf dist/webpack.config.js',
-      'build-server': 'yarn clean:server && yarn tsc -p tsconfig.server.json ',
-      start: 'node dist/server',
+      dev: 'webpack serve --config webpack.dev.js',
+      build: 'webpack --config webpack.prod.js',
+      'build:release': 'webpack --env production',
       test: 'jest --watch',
-      'test:ci': 'yarn jest --bail --silent --no-watchman --colors --config=jest.config.js',
+      'test:ci': 'jest --bail --silent --no-watchman --colors --coverage',
       'test:once': 'jest --no-watch',
       lint: 'eslint . --cache --quiet --ext .js,.ts,.tsx,.json',
       'lint:ci': 'yarn lint',
       'ci:local': 'yarn lint && yarn build',
-      format: 'prettier --write src/**/*.ts{,x}',
+      format: "prettier --write 'src/**/*.ts{,x}'",
       typecheck: 'tsc --noEmit --pretty',
+      prepare: 'husky',
       'pre-commit': 'lint-staged',
       'pre-push': 'lint-prepush',
     },
@@ -173,55 +152,53 @@ export const installTemplate = async ({
           concurrent: [
             'yarn eslint --cache --quiet --ext .js,.ts,.tsx,.json',
             'bash -c tsc',
-            'yarn jest --bail --no-watchman --colors --silent --config=jest.config.js --findRelatedTests',
+            'yarn jest --bail --no-watchman --colors --silent --findRelatedTests',
           ],
         },
       },
     },
     /**
-     * Default dependencies.
+     * Runtime dependencies — included in Module Federation shared config.
      */
     dependencies: {
-      '@okta/jwt-verifier': '3.0.1',
-      axios: '1.4.0',
-      cors: '^2.8.5',
-      dotenv: '^16.3.1',
-      express: '^4.18.2',
-      'express-static-gzip': '^2.1.7',
-      handlebars: '^4.7.7',
-      'http-proxy': '^1.18.1',
-      winston: '^3.10.0',
+      '@cko/calendar': '^10.2.0',
+      '@cko/dashboard-shared': '1.90.0',
+      '@cko/data-visualisation': '1.3.4',
+      '@cko/icons': '^10.2.0',
+      '@cko/patterns': '^10.2.0',
+      '@cko/primitives': '^10.2.0',
+      '@cko/utils': '^9.23.2',
+      '@okta/okta-react': '6.9.0',
+      '@tanstack/react-query': '4.35.3',
+      'date-fns': '4.1.0',
+      'date-fns-tz': '^3.2.0',
+      polished: '4.3.1',
+      react: '18.3.1',
+      'react-dom': '18.3.1',
+      'react-error-boundary': '^4.0.11',
+      'react-router-dom': '^5.3.3',
+      'styled-components': '6.1.13',
+      'styled-system': '5.1.5',
     },
+    /**
+     * Build and dev tooling — not bundled into the MFE output.
+     */
     devDependencies: {
-      '@babel/core': '^7.22.10',
+      '@babel/core': '7.26.0',
       '@babel/plugin-proposal-class-properties': '^7.18.6',
       '@babel/plugin-syntax-dynamic-import': '^7.8.3',
-      '@babel/preset-env': '^7.22.10',
-      '@babel/preset-react': '^7.22.5',
-      '@babel/preset-typescript': '^7.22.5',
-      '@cko/dashboard-shared': '1.48.2',
-      '@cko/icons': '8.7.7',
-      '@cko/papyrus': '8.7.7',
-      '@cko/primitives': '8.7.7',
-      '@cko/utils': '8.7.7',
-      '@okta/okta-react': '^6.7.0',
-      '@pmmmwh/react-refresh-webpack-plugin': '^0.5.10',
-      '@popperjs/core': '^2.11.6',
-      '@testing-library/jest-dom': '^6.0.0',
+      '@babel/preset-env': '^7.26.0',
+      '@babel/preset-react': '^7.25.9',
+      '@babel/preset-typescript': '^7.26.0',
+      '@pmmmwh/react-refresh-webpack-plugin': '^0.5.15',
+      '@testing-library/jest-dom': '^6.6.3',
       '@testing-library/react': '^14.0.0',
-      '@types/cors': '^2.8.13',
-      '@types/express': '^4.17.15',
-      '@types/http-proxy': '^1.17.9',
+      '@testing-library/user-event': '^14.5.2',
       '@types/jest': '^29.2.5',
       '@types/node': '^18.11.18',
-      '@types/node-fetch': '^2.5.11',
-      '@types/react': '18.0.26',
-      '@types/react-dom': '^18.0.10',
+      '@types/react': '^18.3.1',
+      '@types/react-dom': '^18.3.0',
       '@types/react-router-dom': '^5.3.3',
-      '@types/styled-components': '^5.1.26',
-      '@types/styled-system': '^5.1.16',
-      '@types/testing-library__jest-dom': '^5.14.9',
-      '@types/webpack-dev-middleware': '^5.0.2',
       '@typescript-eslint/eslint-plugin': '^5.56.0',
       '@typescript-eslint/parser': '^5.56.0',
       'babel-loader': '^9.1.2',
@@ -229,13 +206,11 @@ export const installTemplate = async ({
       'babel-plugin-styled-components': '^2.0.7',
       'case-sensitive-paths-webpack-plugin': '^2.4.0',
       'clean-webpack-plugin': '^4.0.0',
-      'compression-webpack-plugin': '^10.0.0',
+      'compression-webpack-plugin': '11.1.0',
       'core-js': '^3.27.1',
       'css-loader': '^6.7.3',
-      'css-minimizer-webpack-plugin': '^3.4.1',
-      'date-fns': '^2.29.3',
-      downshift: '^8.1.0',
-      eslint: '^8.36.0',
+      'css-minimizer-webpack-plugin': '7.0.0',
+      eslint: '^8.50.0',
       'eslint-config-airbnb': '^19.0.4',
       'eslint-config-airbnb-typescript': '^17.0.0',
       'eslint-config-prettier': '^9.0.0',
@@ -250,44 +225,25 @@ export const installTemplate = async ({
       'eslint-plugin-react': '^7.32.2',
       'eslint-plugin-react-hooks': '^4.6.0',
       'eslint-plugin-testing-library': '^6.0.0',
-      'focus-visible': '^5.2.0',
-      'fork-ts-checker-webpack-plugin': '8.0.0',
-      jest: '^29.3.1',
+      husky: '^9.1.7',
+      jest: '^29.7.0',
       'jest-date-mock': '^1.0.8',
-      'jest-get-type': '^29.2.0',
+      'jest-environment-jsdom': '^29.7.0',
       'jest-localstorage-mock': '^2.4.26',
-      'jest-styled-components': '^7.1.1',
-      'lint-prepush': '^2.1.0',
-      'lint-staged': '^14.0.0',
-      livereload: '^0.9.3',
-      'node-fetch': '^2.6.1',
-      'node-polyfill-webpack-plugin': '^2.0.1',
-      polished: '^4.2.2',
+      'jest-styled-components': '^7.2.0',
+      'lint-prepush': '3.0.2',
+      'lint-staged': '^15.2.10',
       'postcss-safe-parser': '^6.0.0',
-      prettier: '^3.0.0',
-      'query-string': '^7.0.1',
-      react: '18.2.0',
-      'react-dom': '^18.2.0',
-      'react-dropzone': '^14.2.3',
-      'react-error-boundary': '^4.0.11',
-      'react-focus-lock': '^2.9.2',
-      'react-is': '^17.0.2',
-      'react-popper': '^2.3.0',
-      'react-query': '^3.39.3',
+      prettier: '^3.3.3',
       'react-refresh': '^0.14.0',
-      'react-router-dom': '^5.3.3',
-      rimraf: '^5.0.1',
       'style-loader': '^3.3.3',
-      'styled-components': '^5.3.11',
-      'styled-system': '^5.1.5',
-      'terser-webpack-plugin': '^5.3.9',
-      typescript: '^4.9.5',
+      'terser-webpack-plugin': '^5.3.10',
+      typescript: '5.7.2',
       'url-loader': '^4.1.1',
-      uuid: '^8.0.0',
-      webpack: '5.88.2',
-      'webpack-cli': '5.1.4',
-      'webpack-dev-middleware': '6.1.1',
-      'webpack-hot-middleware': '2.25.4',
+      webpack: '5.96.1',
+      'webpack-cli': '^5.1.4',
+      'webpack-dev-server': '5.1.0',
+      'webpack-merge': '^5.10.0',
     },
   };
 

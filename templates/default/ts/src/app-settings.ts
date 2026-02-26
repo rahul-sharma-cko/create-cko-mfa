@@ -1,8 +1,10 @@
-// We set the config object on window in _document
-// @ts-ignore
-const appConfig = typeof window === 'undefined' ? {} : window.__boilerplate_config;
+import { VARIABLES } from './config';
 
-const api = appConfig.WEBUI_MF_BOILERPLATE_API!;
+// Config is injected onto window by the dashboard shell app at runtime.
+// @ts-ignore
+const appConfig = typeof window === 'undefined' ? {} : window.__compass_config;
+
+const api = appConfig?.APP_API_BASE_URL ?? VARIABLES.APP_API_BASE_URL;
 
 const settings = {
   api,

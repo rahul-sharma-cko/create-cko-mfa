@@ -7,11 +7,15 @@
 /scripts/*
 package.json
 eslintrc.js
-webpack.config.js
+webpack.common.js
+webpack.dev.js
+webpack.prod.js
+moduleFederationConfig.js
+sourcemapsConfig.js
 jest.config.js
+jestGlobalSetup.js
 babel.config.js
 babel-plugin-macros.config.js
 tsconfig.json
 tsconfig.base.json
-tsconfig.server.json
 tsconfig.eslint.json

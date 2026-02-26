@@ -4,9 +4,9 @@
     "noEmit": true,
     "jsx": "preserve",
     "baseUrl": "./src",
-    "outDir": "dist/client",
-    "types": ["node", "jest"],
-    "incremental": true
+    "outDir": "dist",
+    "types": ["node", "jest", "@testing-library/jest-dom"],
+    "useUnknownInCatchVariables": false
   },
-  "include": ["src/**/*.js", "src/**/*.ts", "src/**/*.tsx", "src/**/*.json"]
+  "exclude": ["node_modules", "test"]
 }

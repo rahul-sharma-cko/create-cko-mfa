@@ -124,10 +124,16 @@ export async function createApp({
   const isOnline = !useYarn || (await getOnline());
   const originalDirectory = process.cwd();
 
-  console.log(`Creating a new Next.js app in ${green(root)}.`);
+  console.log(`Creating a new CKO MFE in ${green(root)}.`);
   console.log();
 
   process.chdir(root);
+
+  // Init git before installing so that husky's `prepare` script can find .git.
+  if (tryGitInit(root)) {
+    console.log('Initialized a git repository.');
+    console.log();
+  }
 
   const packageJsonPath = path.join(root, 'package.json');
   let hasPackageJson = false;
@@ -167,15 +173,6 @@ export async function createApp({
       fs.copyFileSync(getTemplateFile({ template, mode, file: 'gitignore' }), ignorePath);
     }
 
-    // Copy `next-env.d.ts` to any example that is typescript
-    const tsconfigPath = path.join(root, 'tsconfig.json');
-    if (fs.existsSync(tsconfigPath)) {
-      fs.copyFileSync(
-        getTemplateFile({ template, mode: 'ts', file: 'next-env.d.ts' }),
-        path.join(root, 'next-env.d.ts'),
-      );
-    }
-
     hasPackageJson = fs.existsSync(packageJsonPath);
     if (hasPackageJson) {
       console.log('Installing packages. This might take a couple of minutes.');
@@ -199,11 +196,6 @@ export async function createApp({
       srcDir,
       importAlias,
     });
-  }
-
-  if (tryGitInit(root)) {
-    console.log('Initialized a git repository.');
-    console.log();
   }
 
   let cdpath: string;

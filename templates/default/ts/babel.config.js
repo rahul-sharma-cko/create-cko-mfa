@@ -5,6 +5,9 @@ module.exports = {
       {
         corejs: 3,
         useBuiltIns: 'entry',
+        targets: {
+          esmodules: true,
+        },
       },
     ],
     '@babel/typescript',
@@ -14,6 +17,7 @@ module.exports = {
     'inline-react-svg',
     '@babel/proposal-class-properties',
     '@babel/plugin-syntax-dynamic-import',
+    ['babel-plugin-styled-components', { displayName: false, pure: true }],
   ],
   env: {
     test: {
